@@ -62,13 +62,14 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     ///////////////////
 
     sprintf(response, "%s\n"
-                      "Date: %s\n"
                       "Content-Type: %s\n"
                       "Content-Length: %d\n"
                       "Connection: close\n"
+                      "Date: %s\n"
                       "\n"
-                      "%s",
-            header, c_time_string, content_type, content_length, body);
+
+                      "%s\n",
+            header, content_type, content_length, c_time_string, body);
 
     int response_length = strlen(response);
 
@@ -102,7 +103,7 @@ void get_d20(int fd)
 
     // printf("Random Number: %d\n", number);
     // Use send_response() to send it back as text/plain data
-    send_response(fd, "HTTP/1.1 200 OK\n", "text/plain\n", str_num, size);
+    send_response(fd, "HTTP/1.1 200 OK", "text/plain", str_num, size);
     ///////////////////
     // IMPLEMENT ME! //
     ///////////////////
@@ -148,9 +149,7 @@ void get_file(int fd, struct cache *cache, char *request_path)
     char *mime_type;
 
     char path[250];
-    sprintf(path, "%s", "./serverroot");
-    strcat(path, request_path);
-    // printf("PATH: %s\n", path);
+    sprintf(path, "%s%s", SERVER_ROOT, request_path);
 
     snprintf(filepath, sizeof filepath, path, SERVER_ROOT);
     filedata = file_load(filepath);
@@ -164,7 +163,7 @@ void get_file(int fd, struct cache *cache, char *request_path)
 
     mime_type = mime_type_get(filepath);
 
-    send_response(fd, "HTTP/1.1 200 OK\n", mime_type, filedata->data, filedata->size);
+    send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
 }
 
 /**
@@ -207,8 +206,8 @@ void handle_http_request(int fd, struct cache *cache)
     // Read the first two components of the first line of the request
     sscanf(request, "%s %s", method, path);
 
-    printf("method: %s\n", method); // GET
-    printf("path: %s\n", path);     // /foobar.html
+    // printf("method: %s\n", method); // GET
+    // printf("path: %s\n", path);     // /foobar.html
 
     // If GET, handle the get endpoints
 
