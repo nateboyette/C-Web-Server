@@ -61,20 +61,25 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     // IMPLEMENT ME! //
     ///////////////////
 
-    sprintf(response, "%s\n"
-                      "Content-Type: %s\n"
-                      "Content-Length: %d\n"
-                      "Connection: close\n"
-                      "Date: %s\n"
-                      "\n"
+    int response_length = sprintf(response, "%s\n"
+                                            "Content-Type: %s\n"
+                                            "Content-Length: %d\n"
+                                            "Connection: close\n"
+                                            "Date: %s\n"
+                                            "\n",
 
-                      "%s\n",
-            header, content_type, content_length, c_time_string, body);
-
-    int response_length = strlen(response);
+                                  header,
+                                  content_type, content_length, c_time_string);
 
     // Send it all!
     int rv = send(fd, response, response_length, 0);
+
+    if (rv < 0)
+    {
+        perror("send");
+    }
+
+    rv = send(fd, body, content_length, 0);
 
     if (rv < 0)
     {
@@ -148,22 +153,21 @@ void get_file(int fd, struct cache *cache, char *request_path)
     struct file_data *filedata;
     char *mime_type;
 
-    char path[250];
-    sprintf(path, "%s%s", SERVER_ROOT, request_path);
-
-    snprintf(filepath, sizeof filepath, path, SERVER_ROOT);
+    snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
     filedata = file_load(filepath);
 
     if (filedata == NULL)
     {
         // TODO: make this non-fatal
-        fprintf(stderr, "cannot find system 404 file\n");
-        exit(3);
+        resp_404(fd);
+        return;
     }
 
     mime_type = mime_type_get(filepath);
 
     send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
+
+    file_free(filedata);
 }
 
 /**
@@ -239,6 +243,8 @@ int main(void)
     int newfd;                          // listen on sock_fd, new connection on newfd
     struct sockaddr_storage their_addr; // connector's address information
     char s[INET6_ADDRSTRLEN];
+
+    srand(time(NULL));
 
     struct cache *cache = cache_create(10, 0);
 
